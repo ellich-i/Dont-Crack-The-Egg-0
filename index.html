@@ -11,8 +11,9 @@
     <h1>DON'T CRACK THE EGG</h1>
     <p class="tagline">One fragile egg. One dangerous kitchen. One mission: survive.</p>
 
-    <!-- Top bar: timer, score, lives -->
+    <!-- Top bar: level, timer, score, lives -->
     <div class="hud">
+      <div class="chip">🏁 Level <span id="level">1</span>/5</div>
       <div class="chip">⏱ <span id="time">80</span>s</div>
       <div class="chip">🍞 <span id="score">0</span></div>
       <div class="chip" id="hearts">🥚🥚🥚</div>
@@ -26,7 +27,7 @@
       <div id="overlay" class="overlay">
         <h2 id="ovTitle">Ready to roll? 🥚</h2>
         <p id="ovText">
-          Roll the egg to the 🪺 nest!<br>
+          Roll the egg to the 🪺 nest! Clear all 5 levels!<br>
           🔪 Knives = instant game over<br>
           🥖 Rolling pins crack the egg (3 hits = out)<br>
           💧 Spilled water = slippery<br>
@@ -36,7 +37,7 @@
       </div>
     </div>
 
-    <p class="help">Move: Arrow keys / WASD · Phone: drag on the screen · Restart: R</p>
+    <p class="help">Move: Arrow keys / WASD · Phone: drag on the screen · Restart level: R · Jump to level: 1–5</p>
   </main>
 
   <script src="script.js"></script>
