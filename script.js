@@ -6,6 +6,7 @@ const VIEW_H = canvas.height;
 
 const timeEl = document.getElementById("time");
 const scoreEl = document.getElementById("score");
+const levelEl = document.getElementById("level");
 const heartsEl = document.getElementById("hearts");
 const overlay = document.getElementById("overlay");
 const ovTitle = document.getElementById("ovTitle");
@@ -13,67 +14,184 @@ const ovText = document.getElementById("ovText");
 const startBtn = document.getElementById("startBtn");
 
 // ===== 2. Game settings =====
-const WORLD_W = 2600;          // size of the whole kitchen floor
-const WORLD_H = 1500;
-const START = { x: 150, y: 1280 };
-const NEST = { x: 2450, y: 170, r: 50 };   // finish line
-const TIME_LIMIT = 80;         // seconds
 const MAX_CRACKS = 3;          // lives
 const MAX_SPEED = 480;
 const SHADOW = "rgba(15, 35, 70, 0.28)";
 const SHX = -16;               // shadow direction (left)
 const SHY = 22;                // shadow direction (down)
 
-// ===== 3. Level data =====
-// Walls (cutting boards) that make the zigzag path
-const walls = [
-  { x: 0,   y: 1000, w: 1700, h: 60 },
-  { x: 900, y: 600,  w: 1700, h: 60 },
-  { x: 0,   y: 250,  w: 1700, h: 60 }
+// ===== 3. Small helpers to build level data (keeps the levels short) =====
+function box(x, y, w, h) { return { x: x, y: y, w: w, h: h }; }
+function pud(x, y, r) { return { x: x, y: y, r: r }; }
+function pin(cx, cy, w, h, axis, amp, speed, phase) {
+  return { cx: cx, cy: cy, w: w, h: h, axis: axis, amp: amp, speed: speed, phase: phase };
+}
+const COLORS = { bowl: "#c9574f", pot: "#9aa0a6", kettle: "#b8564b", jar: "#7fa38b" };
+function rnd(x, y, r, type) { return { x: x, y: y, r: r, color: COLORS[type], type: type }; }
+
+// A gate = 2 knives (top + bottom) with a small gap between them
+function gate(x, gapY, gap, worldH) {
+  return [box(x, 0, 20, gapY), box(x, gapY + gap, 20, worldH - (gapY + gap))];
+}
+
+// ===== 4. All levels (each level is just data) =====
+const LEVELS = [
+  // ---------- LEVEL 1: easy warm-up ----------
+  {
+    name: "Level 1 · Warm-Up Counter",
+    world: [2600, 1500], start: [150, 1280], nest: [2450, 170], time: 80,
+    walls: [box(0, 1000, 1700, 60), box(900, 600, 1700, 60), box(0, 250, 1700, 60)],
+    knives: [box(500, 1150, 200, 20), box(1100, 1250, 20, 250), box(1350, 1300, 210, 20),
+             box(1500, 760, 20, 240), box(1000, 660, 20, 200), box(1100, 400, 20, 200), box(2100, 0, 20, 110)],
+    pins: [pin(800, 1280, 28, 160, "x", 100, 2.0, 2), pin(1250, 830, 28, 150, "x", 140, 1.6, 0),
+           pin(1500, 450, 150, 28, "y", 110, 1.8, 1)],
+    puddles: [pud(600, 1300, 90), pud(1900, 1150, 80), pud(950, 830, 85), pud(1300, 450, 90), pud(2250, 180, 75)],
+    rounds: [rnd(400, 1420, 48, "bowl"), rnd(1250, 1130, 52, "pot"), rnd(400, 880, 46, "kettle"),
+             rnd(500, 480, 40, "bowl"), rnd(2300, 1350, 55, "jar"), rnd(2300, 830, 50, "pot")],
+    route: [[150, 1280], [1900, 1280], [1900, 830], [700, 830], [700, 450], [1900, 450], [1900, 180], [2450, 180]],
+    extra: [[600, 1105], [1110, 1200], [1455, 1255], [1510, 710], [1110, 930], [1110, 360]]
+  },
+
+  // ---------- LEVEL 2: 4 long lanes, more knives + pins ----------
+  {
+    name: "Level 2 · Breakfast Rush",
+    world: [2800, 1600], start: [150, 1400], nest: [2600, 225], time: 80,
+    walls: [box(0, 1150, 2000, 60), box(800, 800, 2000, 60), box(0, 450, 2000, 60)],
+    knives: [box(900, 1210, 20, 160), box(1500, 1380, 20, 220), box(1700, 860, 20, 150),
+             box(1000, 1000, 20, 150), box(700, 510, 20, 150), box(1400, 650, 20, 150), box(2500, 0, 20, 170)],
+    pins: [pin(1250, 1400, 28, 160, "x", 150, 1.8, 0), pin(1300, 1005, 160, 28, "y", 80, 2.0, 0),
+           pin(1050, 655, 28, 160, "x", 200, 2.2, 1), pin(1900, 655, 160, 28, "y", 80, 2.4, 2)],
+    puddles: [pud(500, 1400, 90), pud(1800, 1400, 85), pud(2400, 1250, 80), pud(1500, 1005, 85),
+              pud(500, 655, 80), pud(1900, 655, 90), pud(2450, 225, 80)],
+    rounds: [rnd(300, 1550, 45, "bowl"), rnd(2000, 1530, 50, "pot"), rnd(650, 920, 40, "kettle"),
+             rnd(1900, 1090, 45, "pot"), rnd(300, 740, 45, "bowl"), rnd(1700, 560, 40, "jar"),
+             rnd(1200, 300, 55, "pot"), rnd(2000, 120, 45, "kettle")],
+    route: [[150, 1400], [2400, 1400], [2400, 1005], [400, 1005], [400, 655], [2400, 655], [2400, 225], [2600, 225]],
+    extra: [[1010, 925], [1710, 1085], [710, 740], [1410, 580], [910, 1470], [1510, 1295]]
+  },
+
+  // ---------- LEVEL 3: vertical columns, zigzag knives, gate pins ----------
+  {
+    name: "Level 3 · Knife Block Alley",
+    world: [3000, 1500], start: [150, 250], nest: [2800, 1250], time: 75,
+    walls: [box(700, 0, 60, 1100), box(1300, 400, 60, 1100), box(1900, 0, 60, 1100), box(2500, 400, 60, 1100)],
+    knives: [box(0, 550, 300, 20), box(400, 850, 300, 20),
+             box(760, 900, 330, 20), box(970, 550, 330, 20),
+             box(1360, 600, 330, 20), box(1570, 900, 330, 20),
+             box(1960, 900, 330, 20), box(2170, 550, 330, 20),
+             box(2560, 700, 260, 20), box(2740, 1000, 260, 20)],
+    pins: [pin(350, 400, 150, 28, "x", 200, 2.0, 0), pin(560, 1300, 28, 160, "y", 100, 2.4, 1),
+           pin(1030, 720, 150, 28, "x", 130, 2.2, 2), pin(1330, 200, 28, 150, "y", 110, 2.0, 0),
+           pin(1630, 750, 150, 28, "x", 130, 2.4, 0.5), pin(1780, 1300, 28, 160, "y", 100, 2.6, 2),
+           pin(2230, 725, 150, 28, "x", 130, 2.6, 1.5), pin(2530, 200, 28, 150, "y", 110, 2.4, 1),
+           pin(2780, 850, 150, 28, "x", 100, 2.8, 0)],
+    puddles: [pud(200, 1300, 85), pud(1000, 1230, 80), pud(1000, 330, 75), pud(1600, 320, 80),
+              pud(2200, 1230, 85), pud(2200, 330, 75), pud(2800, 330, 80)],
+    rounds: [rnd(60, 1000, 35, "bowl"), rnd(1200, 1400, 45, "pot"), rnd(1500, 1400, 40, "jar"),
+             rnd(2400, 1350, 45, "kettle"), rnd(2000, 200, 40, "bowl"), rnd(2900, 1400, 45, "pot")],
+    route: [[150, 250], [150, 1300], [1000, 1300], [1000, 250], [1600, 250], [1600, 1300],
+            [2200, 1300], [2200, 250], [2800, 250], [2800, 1250]],
+    extra: [[350, 720], [1200, 730], [1530, 760], [2230, 700], [2830, 850]]
+  },
+
+  // ---------- LEVEL 4: a spiral! tight 110px gaps, 13 pins, ice on every corner ----------
+  {
+    name: "Level 4 · Whisk Spiral",
+    world: [2000, 1500], start: [120, 120], nest: [1000, 750], time: 95,
+    walls: [box(0, 240, 1700, 60), box(1700, 240, 60, 960), box(240, 1200, 1520, 60),
+            box(240, 540, 60, 720), box(240, 540, 1220, 60), box(1400, 540, 60, 420), box(540, 900, 920, 60)],
+    knives: [
+      // corridor 1 (top, going right)
+      box(500, 0, 20, 130), box(1100, 110, 20, 130), box(1500, 0, 20, 130),
+      // corridor 2 (right side, going down)
+      box(1760, 500, 130, 20), box(1870, 850, 130, 20),
+      // corridor 3 (bottom, going left)
+      box(1500, 1260, 20, 130), box(1000, 1370, 20, 130), box(500, 1260, 20, 130),
+      // corridor 4 (left side, going up)
+      box(0, 1100, 130, 20), box(110, 700, 130, 20),
+      // corridor 5 (going right)
+      box(500, 300, 20, 130), box(1000, 410, 20, 130), box(1350, 300, 20, 130),
+      // corridor 6 (going down)
+      box(1460, 700, 130, 20), box(1570, 950, 130, 20),
+      // corridor 7 (going left)
+      box(1300, 960, 20, 130), box(900, 1070, 20, 130), box(600, 960, 20, 130),
+      // corridor 8 (going up)
+      box(300, 840, 130, 20)
+    ],
+    pins: [pin(800, 120, 28, 130, "y", 70, 2.4, 0), pin(1300, 120, 28, 130, "y", 70, 2.6, 1.5),
+           pin(1880, 700, 130, 28, "x", 70, 2.6, 0), pin(1880, 1100, 130, 28, "x", 70, 2.8, 1),
+           pin(1250, 1380, 28, 130, "y", 70, 2.6, 0), pin(750, 1380, 28, 130, "y", 70, 2.8, 2),
+           pin(120, 900, 130, 28, "x", 70, 2.8, 0),
+           pin(750, 420, 28, 130, "y", 70, 3.0, 0), pin(1175, 420, 28, 130, "y", 70, 3.0, 1),
+           pin(1580, 825, 130, 28, "x", 70, 3.0, 0),
+           pin(1100, 1080, 28, 130, "y", 70, 3.0, 0), pin(750, 1080, 28, 130, "y", 70, 3.2, 1),
+           pin(900, 750, 28, 220, "y", 60, 3.4, 0)],
+    puddles: [pud(1860, 180, 75), pud(1860, 1360, 75), pud(150, 1340, 75), pud(150, 460, 75),
+              pud(1580, 470, 70), pud(1580, 1040, 70), pud(430, 1060, 70)],
+    rounds: [],
+    route: [[120, 120], [1880, 120], [1880, 1380], [120, 1380], [120, 420], [1580, 420],
+            [1580, 1080], [420, 1080], [420, 750], [1000, 750]],
+    extra: [[500, 190], [1100, 60], [1500, 190], [1945, 510], [1815, 860], [1500, 1445], [1000, 1315],
+            [500, 1445], [190, 1110], [55, 710], [500, 485], [1000, 355], [1350, 485],
+            [1645, 710], [1515, 960], [1300, 1145], [900, 1015], [600, 1145], [485, 850]]
+  },
+
+  // ---------- LEVEL 5: FINAL BOSS - knife gates with tiny gaps + ice + fast pins ----------
+  {
+    name: "Level 5 · Chef's Gauntlet",
+    world: [2700, 1500], start: [150, 750], nest: [2550, 750], time: 55,
+    walls: [],
+    knives: [].concat(gate(500, 300, 120, 1500), gate(900, 1000, 120, 1500), gate(1300, 500, 120, 1500),
+                      gate(1700, 1050, 120, 1500), gate(2100, 350, 120, 1500)),
+    pins: [pin(700, 750, 28, 420, "x", 120, 2.8, 0), pin(1100, 750, 28, 420, "x", 120, 3.0, 1),
+           pin(1500, 750, 28, 420, "x", 120, 3.2, 2), pin(1900, 750, 28, 420, "x", 120, 3.4, 0.5),
+           pin(2330, 750, 28, 420, "x", 100, 3.6, 1),
+           pin(1240, 560, 28, 100, "y", 70, 3.4, 0), pin(2040, 410, 28, 100, "y", 70, 3.6, 1)],
+    puddles: [pud(400, 380, 70), pud(780, 1040, 70), pud(1180, 560, 70), pud(1580, 1100, 70),
+              pud(1980, 420, 70), pud(2400, 750, 80)],
+    rounds: [rnd(200, 250, 50, "bowl"), rnd(200, 1250, 55, "pot"), rnd(700, 150, 45, "kettle"),
+             rnd(700, 1350, 45, "jar"), rnd(1100, 150, 50, "bowl"), rnd(1100, 1350, 50, "pot"),
+             rnd(1500, 150, 45, "bowl"), rnd(1500, 1350, 50, "pot"), rnd(1900, 150, 45, "bowl"),
+             rnd(1900, 1350, 45, "jar"), rnd(2400, 200, 50, "kettle"), rnd(2400, 1300, 50, "pot")],
+    route: [[150, 750], [500, 360], [900, 1060], [1300, 560], [1700, 1110], [2100, 410], [2550, 750]],
+    extra: [[510, 360], [910, 1060], [1310, 560], [1710, 1110], [2110, 410]]
+  }
 ];
 
-// Knives = instant game over
-const knives = [
-  { x: 500,  y: 1150, w: 200, h: 20 },
-  { x: 1100, y: 1250, w: 20,  h: 250 },
-  { x: 1350, y: 1300, w: 210, h: 20 },
-  { x: 1500, y: 760,  w: 20,  h: 240 },
-  { x: 1000, y: 660,  w: 20,  h: 200 },
-  { x: 1100, y: 400,  w: 20,  h: 200 },
-  { x: 2100, y: 0,    w: 20,  h: 110 }
-];
+// ===== 5. Current level data (filled by loadLevel) =====
+let WORLD_W = 0;
+let WORLD_H = 0;
+let START = { x: 0, y: 0 };
+let NEST = { x: 0, y: 0, r: 50 };   // finish line
+let TIME_LIMIT = 80;
+let walls = [];
+let knives = [];
+let pins = [];
+let puddles = [];
+let rounds = [];
+let crumbs = [];
 
-// Rolling pins = moving obstacles (they slide back and forth)
-const pins = [
-  { cx: 800,  cy: 1280, w: 28,  h: 160, axis: "x", amp: 100, speed: 2.0, phase: 2 },
-  { cx: 1250, cy: 830,  w: 28,  h: 150, axis: "x", amp: 140, speed: 1.6, phase: 0 },
-  { cx: 1500, cy: 450,  w: 150, h: 28,  axis: "y", amp: 110, speed: 1.8, phase: 1 }
-];
-
-// Spilled water = slippery circles
-const puddles = [
-  { x: 600,  y: 1300, r: 90 },
-  { x: 1900, y: 1150, r: 80 },
-  { x: 950,  y: 830,  r: 85 },
-  { x: 1300, y: 450,  r: 90 },
-  { x: 2250, y: 180,  r: 75 }
-];
-
-// Kitchen stuff you bounce off (bowls, pots, kettle, jar)
-const rounds = [
-  { x: 400,  y: 1420, r: 48, color: "#c9574f", type: "bowl" },
-  { x: 1250, y: 1130, r: 52, color: "#9aa0a6", type: "pot" },
-  { x: 400,  y: 880,  r: 46, color: "#b8564b", type: "kettle" },
-  { x: 500,  y: 480,  r: 40, color: "#d98c3f", type: "bowl" },
-  { x: 2300, y: 1350, r: 55, color: "#7fa38b", type: "jar" },
-  { x: 2300, y: 830,  r: 50, color: "#c9574f", type: "pot" }
-];
+// Copy one level's data into the game
+function loadLevel(i) {
+  levelIndex = i;
+  const L = LEVELS[i];
+  WORLD_W = L.world[0];
+  WORLD_H = L.world[1];
+  START = { x: L.start[0], y: L.start[1] };
+  NEST = { x: L.nest[0], y: L.nest[1], r: 50 };
+  TIME_LIMIT = L.time;
+  walls = L.walls;
+  knives = L.knives;
+  puddles = L.puddles;
+  rounds = L.rounds;
+  pins = L.pins.map((p) => Object.assign({}, p));   // copy, because pins move
+  makeCrumbs(L.route, L.extra);
+  levelEl.textContent = i + 1;
+}
 
 // Crumbs = collectible points. We place them along the route.
-const route = [[150,1280],[1900,1280],[1900,830],[700,830],[700,450],[1900,450],[1900,180],[2450,180]];
-const crumbs = [];
-
-function makeCrumbs() {
+function makeCrumbs(route, extra) {
+  crumbs = [];
   for (let i = 0; i < route.length - 1; i++) {
     const a = route[i];
     const b = route[i + 1];
@@ -84,10 +202,8 @@ function makeCrumbs() {
       if (!isBlocked(x, y)) crumbs.push({ x: x, y: y, taken: false });
     }
   }
-  // Extra crumbs on the safe lanes near knives (risk = reward)
-  [[600,1105],[1110,1200],[1455,1255],[1510,710],[1110,930],[1110,360]].forEach((p) => {
-    crumbs.push({ x: p[0], y: p[1], taken: false });
-  });
+  // Extra crumbs inside the knife gaps (risk = reward)
+  extra.forEach((p) => crumbs.push({ x: p[0], y: p[1], taken: false }));
 }
 
 // True if a point is too close to a wall, knife, or round object
@@ -102,15 +218,18 @@ function isBlocked(x, y) {
   return false;
 }
 
-// ===== 4. Game state =====
-let state = "menu";   // "menu", "play", "win", "lose"
-let egg = makeEgg();
+// ===== 6. Game state =====
+let levelIndex = 0;
+let levelStartScore = 0;        // score when the level began (used for retry)
+let nextAction = "newgame";     // what the big button does: "newgame", "next", "retry"
+let state = "menu";             // "menu", "play", "win", "lose"
+let egg = { x: 0, y: 0, vx: 0, vy: 0, r: 16, spin: 0 };
 let timeLeft = TIME_LIMIT;
 let score = 0;
 let cracks = 0;
-let invincible = 0;   // short protection after a pin hit
+let invincible = 0;             // short protection after a pin hit
 let gameTime = 0;
-let clock = 0;        // always running, for animations
+let clock = 0;                  // always running, for animations
 let shake = 0;
 let loseReason = "";
 
@@ -118,35 +237,66 @@ function makeEgg() {
   return { x: START.x, y: START.y, vx: 0, vy: 0, r: 16, spin: 0 };
 }
 
-function resetGame() {
+// Start (or restart) one level
+function startLevel(i) {
+  loadLevel(i);
   egg = makeEgg();
   timeLeft = TIME_LIMIT;
-  score = 0;
+  score = levelStartScore;
   cracks = 0;
   invincible = 0;
   gameTime = 0;
   shake = 0;
   loseReason = "";
-  crumbs.forEach((c) => (c.taken = false));
   updatePins(0);
   state = "play";
   overlay.classList.add("hidden");
+}
+
+// What happens when the big overlay button is pressed
+function onButton() {
+  if (state === "play") return;   // stops double-trigger (Enter key + click)
+  if (nextAction === "next") {
+    levelStartScore = score;
+    startLevel(levelIndex + 1);
+  } else if (nextAction === "retry") {
+    startLevel(levelIndex);
+  } else {
+    levelStartScore = 0;
+    startLevel(0);
+  }
 }
 
 function finish(result, reason) {
   state = result;
   loseReason = reason;
   let best = loadBest();
+  const lastLevel = levelIndex === LEVELS.length - 1;
+  let bonus = 0;
 
   if (result === "win") {
     egg.x = NEST.x; egg.y = NEST.y; egg.vx = 0; egg.vy = 0;
-    const bonus = Math.floor(timeLeft) * 5;
+    bonus = Math.floor(timeLeft) * 5;
     score += bonus;
-    if (score > best) { best = score; saveBest(best); }
-    ovTitle.textContent = "🎉 Egg-cellent! You made it!";
-    ovText.innerHTML = "Time bonus: " + bonus + "<br>Total: <b>" + score + "</b> pts<br>Best: " + best;
   } else {
     shake = 14;
+  }
+  if (score > best) { best = score; saveBest(best); }
+
+  if (result === "win") {
+    if (lastLevel) {
+      ovTitle.textContent = "🏆 You beat the whole kitchen!";
+      ovText.innerHTML = "Time bonus: " + bonus + "<br>Final score: <b>" + score + "</b> pts<br>Best: " + best;
+      startBtn.textContent = "↻ Play again";
+      nextAction = "newgame";
+    } else {
+      ovTitle.textContent = "🎉 Level " + (levelIndex + 1) + " clear!";
+      ovText.innerHTML = "Time bonus: " + bonus + "<br>Total: <b>" + score + "</b> pts<br>Best: " + best +
+        "<br><br>Next: " + LEVELS[levelIndex + 1].name;
+      startBtn.textContent = "Next level ▶";
+      nextAction = "next";
+    }
+  } else {
     if (reason === "knife") {
       ovTitle.textContent = "🔪 Sliced!";
       ovText.innerHTML = "That knife was NOT friendly.<br>Score: " + score + " · Best: " + best;
@@ -157,8 +307,9 @@ function finish(result, reason) {
       ovTitle.textContent = "⏰ Time's up!";
       ovText.innerHTML = "The egg got cold.<br>Score: " + score + " · Best: " + best;
     }
+    startBtn.textContent = "↻ Retry level " + (levelIndex + 1);
+    nextAction = "retry";
   }
-  startBtn.textContent = "↻ Try again";
   // wait a bit so the player can see the splat
   setTimeout(() => { if (state !== "play") overlay.classList.remove("hidden"); }, 600);
 }
@@ -171,7 +322,7 @@ function saveBest(v) {
   try { localStorage.setItem("egg-best", v); } catch (e) {}
 }
 
-// ===== 5. Input (keyboard + touch/mouse drag) =====
+// ===== 7. Input (keyboard + touch/mouse drag) =====
 const keys = {};
 const pointer = { active: false, sx: 0, sy: 0, x: 0, y: 0 };
 
@@ -179,7 +330,12 @@ window.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   keys[k] = true;
   if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k)) e.preventDefault();
-  if (k === "r" || (k === "enter" && state !== "play")) resetGame();
+  if (k === "r") startLevel(levelIndex);                      // restart this level
+  if (k === "enter" && state !== "play") onButton();
+  if (["1", "2", "3", "4", "5"].includes(k)) {                // jump to a level (good for demo)
+    levelStartScore = 0;
+    startLevel(Number(k) - 1);
+  }
 });
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 
@@ -195,7 +351,7 @@ canvas.addEventListener("pointermove", (e) => {
 canvas.addEventListener("pointerup", () => { pointer.active = false; });
 canvas.addEventListener("pointercancel", () => { pointer.active = false; });
 
-startBtn.addEventListener("click", resetGame);
+startBtn.addEventListener("click", onButton);
 
 // Returns a direction like { x: 1, y: 0 } from keys or finger drag
 function getInput() {
@@ -220,7 +376,7 @@ function getInput() {
   return { x: x, y: y };
 }
 
-// ===== 6. Helpers =====
+// ===== 8. Helpers =====
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
 
@@ -258,7 +414,7 @@ function updatePins(t) {
   }
 }
 
-// ===== 7. Update (game logic, runs every frame) =====
+// ===== 9. Update (game logic, runs every frame) =====
 function update(dt) {
   gameTime += dt;
   timeLeft -= dt;
@@ -322,299 +478,4 @@ function update(dt) {
       egg.vx = info.nx * 420;
       egg.vy = info.ny * 420;
       cracks += 1;
-      invincible = 1.2;
-      shake = 12;
-      if (cracks >= MAX_CRACKS) { finish("lose", "cracked"); return; }
-    } else {
-      pushOut(info, 0.5);
-    }
-  }
-
-  // Crumbs = +10 points
-  for (const c of crumbs) {
-    if (!c.taken && dist(egg.x, egg.y, c.x, c.y) < egg.r + 8) {
-      c.taken = true;
-      score += 10;
-    }
-  }
-
-  // Nest = finish line
-  if (dist(egg.x, egg.y, NEST.x, NEST.y) < NEST.r - 12) finish("win", "");
-}
-
-// ===== 8. Drawing helpers (flat low-poly style + long shadows) =====
-function disc(x, y, r, color) {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function rr(x, y, w, h, r) {
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
-  ctx.fill();
-}
-
-// Long shadow for rectangles
-function shadowRect(x, y, w, h) {
-  ctx.fillStyle = SHADOW;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + w, y);
-  ctx.lineTo(x + w, y + h);
-  ctx.lineTo(x + w + SHX, y + h + SHY);
-  ctx.lineTo(x + SHX, y + h + SHY);
-  ctx.lineTo(x + SHX, y + SHY);
-  ctx.closePath();
-  ctx.fill();
-}
-
-// Long shadow for circles
-function shadowCapsule(x, y, r) {
-  ctx.strokeStyle = SHADOW;
-  ctx.lineCap = "round";
-  ctx.lineWidth = r * 2;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + SHX, y + SHY);
-  ctx.stroke();
-}
-
-// A box with a darker "side" so it looks chunky 3D
-function drawBox(x, y, w, h, color, depth, radius) {
-  shadowRect(x, y + depth, w, h);
-  ctx.fillStyle = color;
-  rr(x, y + depth, w, h, radius);
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
-  rr(x, y + depth, w, h, radius);
-  ctx.fillStyle = color;
-  rr(x, y, w, h, radius);
-}
-
-function drawWall(w) {
-  drawBox(w.x, w.y, w.w, w.h, "#d9a066", 10, 10);
-  ctx.fillStyle = "rgba(255,255,255,0.14)";
-  for (let xx = w.x + 120; xx < w.x + w.w - 100; xx += 240) ctx.fillRect(xx, w.y + 8, 100, 6);
-}
-
-function drawKnife(k) {
-  const handle = 60;
-  if (k.w > k.h) {
-    drawBox(k.x + handle, k.y, k.w - handle, k.h, "#dfe5ec", 6, 8);
-    drawBox(k.x, k.y - 3, handle, k.h + 6, "#5a3a2a", 6, 6);
-    ctx.fillStyle = "#ff5a5a"; // red edge = danger
-    ctx.fillRect(k.x + handle, k.y + k.h - 3, k.w - handle, 3);
-  } else {
-    drawBox(k.x, k.y + handle, k.w, k.h - handle, "#dfe5ec", 6, 8);
-    drawBox(k.x - 3, k.y, k.w + 6, handle, "#5a3a2a", 6, 6);
-    ctx.fillStyle = "#ff5a5a";
-    ctx.fillRect(k.x + k.w - 3, k.y + handle, 3, k.h - handle);
-  }
-}
-
-function drawPin(p) {
-  drawBox(p.x, p.y, p.w, p.h, "#e8b678", 8, 14);
-  ctx.fillStyle = "#b9742f"; // handles
-  if (p.w > p.h) {
-    rr(p.x, p.y, 24, p.h, 12);
-    rr(p.x + p.w - 24, p.y, 24, p.h, 12);
-  } else {
-    rr(p.x, p.y, p.w, 24, 12);
-    rr(p.x, p.y + p.h - 24, p.w, 24, 12);
-  }
-}
-
-function drawRound(o) {
-  const d = 10;
-  shadowCapsule(o.x, o.y + d, o.r);
-  disc(o.x, o.y + d, o.r, o.color);
-  disc(o.x, o.y + d, o.r, "rgba(0,0,0,0.3)");
-  disc(o.x, o.y, o.r, o.color);
-
-  if (o.type === "bowl") {
-    disc(o.x, o.y, o.r * 0.78, "rgba(255,255,255,0.3)");
-    disc(o.x, o.y, o.r * 0.6, "#e6c48a");
-    ctx.fillStyle = "#b9722e";
-    for (let i = 0; i < 6; i++) {
-      ctx.beginPath();
-      ctx.arc(o.x + Math.cos(i * 1.05) * o.r * 0.33, o.y + Math.sin(i * 1.05) * o.r * 0.33, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  } else if (o.type === "pot") {
-    disc(o.x, o.y, o.r * 0.8, "#4d5359");
-    disc(o.x, o.y, o.r * 0.62, "#6b7278");
-    drawBox(o.x + o.r - 4, o.y - 7, 34, 14, "#5a3a2a", 4, 6);
-  } else if (o.type === "kettle") {
-    disc(o.x - o.r * 0.25, o.y - o.r * 0.25, o.r * 0.35, "rgba(255,255,255,0.25)");
-    disc(o.x, o.y, o.r * 0.22, "#7a2f2a");
-  } else {
-    disc(o.x, o.y, o.r * 0.75, "#a8c7b3");
-    disc(o.x, o.y, o.r * 0.55, "#8fb39e");
-  }
-}
-
-function drawPuddle(p) {
-  disc(p.x, p.y, p.r, "rgba(150,215,245,0.8)");
-  disc(p.x - 8, p.y - 8, p.r * 0.75, "rgba(255,255,255,0.22)");
-  ctx.strokeStyle = "rgba(255,255,255," + (0.3 + Math.sin(clock * 3) * 0.15) + ")";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, p.r * 0.5 + Math.sin(clock * 3) * 4, 0, Math.PI * 2);
-  ctx.stroke();
-}
-
-function drawNest() {
-  shadowCapsule(NEST.x, NEST.y + 8, NEST.r);
-  disc(NEST.x, NEST.y + 8, NEST.r, "#6f4524");
-  disc(NEST.x, NEST.y, NEST.r, "#a8743a");
-  disc(NEST.x, NEST.y, NEST.r * 0.8, "#d2a35c");
-  ctx.strokeStyle = "#8a5a2b";
-  ctx.lineWidth = 3;
-  for (let i = 0; i < 10; i++) {
-    const a = i * 0.63;
-    ctx.beginPath();
-    ctx.moveTo(NEST.x + Math.cos(a) * 18, NEST.y + Math.sin(a) * 18);
-    ctx.lineTo(NEST.x + Math.cos(a + 0.7) * 44, NEST.y + Math.sin(a + 0.7) * 44);
-    ctx.stroke();
-  }
-  disc(NEST.x, NEST.y, 20, "#7b4f26");
-  ctx.fillStyle = "white";
-  ctx.font = "bold 22px sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("🏁 NEST", NEST.x, NEST.y - NEST.r - 14);
-}
-
-function drawCrumb(c) {
-  const y = c.y + Math.sin(clock * 4 + c.x) * 3;
-  disc(c.x, y + 4, 6, "rgba(15,35,70,0.25)");
-  disc(c.x, y, 7, "#ffc83d");
-  disc(c.x - 2, y - 2, 2.5, "#fff0a8");
-}
-
-function drawEgg() {
-  shadowCapsule(egg.x, egg.y + 4, egg.r * 0.9);
-
-  // Blink while protected
-  if (invincible > 0 && Math.floor(clock * 14) % 2 === 0) ctx.globalAlpha = 0.5;
-
-  ctx.save();
-  ctx.translate(egg.x, egg.y - 6);
-  ctx.rotate(egg.spin);
-  ctx.fillStyle = "#fff6e8";
-  ctx.beginPath();
-  ctx.ellipse(0, 0, egg.r * 0.95, egg.r * 1.1, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#c98f5a";   // speckles (they spin so you see it rolling)
-  [[-6, -4, 2.2], [5, 6, 2], [7, -8, 1.6], [-8, 8, 1.6]].forEach((s) => {
-    ctx.beginPath();
-    ctx.arc(s[0], s[1], s[2], 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.restore();
-
-  // Highlight and cracks do not rotate
-  ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.beginPath();
-  ctx.ellipse(egg.x - 6, egg.y - 14, 4, 6, -0.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "#7a5a3a";
-  ctx.lineWidth = 1.8;
-  if (cracks >= 1) {
-    ctx.beginPath();
-    ctx.moveTo(egg.x - 4, egg.y - 20); ctx.lineTo(egg.x, egg.y - 12);
-    ctx.lineTo(egg.x - 5, egg.y - 6); ctx.lineTo(egg.x + 1, egg.y);
-    ctx.stroke();
-  }
-  if (cracks >= 2) {
-    ctx.beginPath();
-    ctx.moveTo(egg.x + 7, egg.y - 16); ctx.lineTo(egg.x + 3, egg.y - 9);
-    ctx.lineTo(egg.x + 8, egg.y - 3);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-}
-
-// Fried egg splat when the egg dies
-function drawSplat(x, y) {
-  ctx.fillStyle = "#fffaf0";
-  [[0, 0, 24], [-18, 6, 14], [16, 10, 16], [4, -18, 12], [-8, 18, 10]].forEach((s) => {
-    ctx.beginPath();
-    ctx.arc(x + s[0], y + s[1], s[2], 0, Math.PI * 2);
-    ctx.fill();
-  });
-  disc(x, y, 10, "#ffb300");
-  disc(x - 3, y - 3, 3, "#ffe08a");
-}
-
-// ===== 9. Render (draw everything) =====
-function render() {
-  // Camera follows the egg
-  const camX = clamp(egg.x - VIEW_W / 2, 0, WORLD_W - VIEW_W);
-  const camY = clamp(egg.y - VIEW_H / 2, 0, WORLD_H - VIEW_H);
-  const sx = (Math.random() - 0.5) * shake;
-  const sy = (Math.random() - 0.5) * shake;
-
-  ctx.fillStyle = "#6b93b9";   // kitchen floor
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-
-  ctx.save();
-  ctx.translate(-camX + sx, -camY + sy);
-
-  // Floor tile lines
-  ctx.strokeStyle = "rgba(255,255,255,0.08)";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  for (let x = Math.floor(camX / 200) * 200; x < camX + VIEW_W + 200; x += 200) {
-    ctx.moveTo(x, camY - 10); ctx.lineTo(x, camY + VIEW_H + 10);
-  }
-  for (let y = Math.floor(camY / 200) * 200; y < camY + VIEW_H + 200; y += 200) {
-    ctx.moveTo(camX - 10, y); ctx.lineTo(camX + VIEW_W + 10, y);
-  }
-  ctx.stroke();
-
-  // START label
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  ctx.font = "bold 28px sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("START →", START.x + 20, START.y + 70);
-
-  puddles.forEach(drawPuddle);
-  drawNest();
-  crumbs.forEach((c) => { if (!c.taken) drawCrumb(c); });
-  walls.forEach(drawWall);
-  rounds.forEach(drawRound);
-  knives.forEach(drawKnife);
-  pins.forEach(drawPin);
-
-  if (state === "lose" && loseReason !== "time") drawSplat(egg.x, egg.y);
-  else drawEgg();
-
-  ctx.restore();
-}
-
-// ===== 10. HUD =====
-function updateHud() {
-  timeEl.textContent = Math.ceil(timeLeft);
-  scoreEl.textContent = score;
-  heartsEl.textContent = "🥚".repeat(MAX_CRACKS - cracks) + "🍳".repeat(cracks);
-}
-
-// ===== 11. Main loop =====
-let last = performance.now();
-function loop(now) {
-  const dt = Math.min((now - last) / 1000, 0.033);
-  last = now;
-  clock += dt;
-  if (state === "play") update(dt);
-  shake = Math.max(0, shake - dt * 40);
-  render();
-  updateHud();
-  requestAnimationFrame(loop);
-}
-
-// ===== 12. Start =====
-makeCrumbs();
-updatePins(0);
-requestAnimationFrame(loop);
+      invincible =
