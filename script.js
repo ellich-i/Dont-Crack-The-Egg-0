@@ -478,4 +478,313 @@ function update(dt) {
       egg.vx = info.nx * 420;
       egg.vy = info.ny * 420;
       cracks += 1;
-      invincible =
+      invincible = 1.2;
+      shake = 12;
+      if (cracks >= MAX_CRACKS) { finish("lose", "cracked"); return; }
+    } else {
+      pushOut(info, 0.5);
+    }
+  }
+
+  // Crumbs = +10 points
+  for (const c of crumbs) {
+    if (!c.taken && dist(egg.x, egg.y, c.x, c.y) < egg.r + 8) {
+      c.taken = true;
+      score += 10;
+    }
+  }
+
+  // Nest = finish line
+  if (dist(egg.x, egg.y, NEST.x, NEST.y) < NEST.r - 12) finish("win", "");
+}
+
+// ===== 10. Drawing helpers (flat low-poly style + long shadows) =====
+function disc(x, y, r, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+  ctx.fill();
+}
+
+// Long shadow for rectangles
+function shadowRect(x, y, w, h) {
+  ctx.fillStyle = SHADOW;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w, y + h);
+  ctx.lineTo(x + w + SHX, y + h + SHY);
+  ctx.lineTo(x + SHX, y + h + SHY);
+  ctx.lineTo(x + SHX, y + SHY);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Long shadow for circles
+function shadowCapsule(x, y, r) {
+  ctx.strokeStyle = SHADOW;
+  ctx.lineCap = "round";
+  ctx.lineWidth = r * 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + SHX, y + SHY);
+  ctx.stroke();
+}
+
+// A box with a darker "side" so it looks chunky 3D
+function drawBox(x, y, w, h, color, depth, radius) {
+  shadowRect(x, y + depth, w, h);
+  ctx.fillStyle = color;
+  rr(x, y + depth, w, h, radius);
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  rr(x, y + depth, w, h, radius);
+  ctx.fillStyle = color;
+  rr(x, y, w, h, radius);
+}
+
+function drawWall(w) {
+  drawBox(w.x, w.y, w.w, w.h, "#d9a066", 10, 10);
+  ctx.fillStyle = "rgba(255,255,255,0.14)";
+  for (let xx = w.x + 120; xx < w.x + w.w - 100; xx += 240) ctx.fillRect(xx, w.y + 8, 100, 6);
+}
+
+function drawKnife(k) {
+  const handle = 60;
+  if (k.w > k.h) {
+    drawBox(k.x + handle, k.y, k.w - handle, k.h, "#dfe5ec", 6, 8);
+    drawBox(k.x, k.y - 3, handle, k.h + 6, "#5a3a2a", 6, 6);
+    ctx.fillStyle = "#ff5a5a"; // red edge = danger
+    ctx.fillRect(k.x + handle, k.y + k.h - 3, k.w - handle, 3);
+  } else {
+    drawBox(k.x, k.y + handle, k.w, k.h - handle, "#dfe5ec", 6, 8);
+    drawBox(k.x - 3, k.y, k.w + 6, handle, "#5a3a2a", 6, 6);
+    ctx.fillStyle = "#ff5a5a";
+    ctx.fillRect(k.x + k.w - 3, k.y + handle, 3, k.h - handle);
+  }
+}
+
+function drawPin(p) {
+  drawBox(p.x, p.y, p.w, p.h, "#e8b678", 8, 14);
+  ctx.fillStyle = "#b9742f"; // handles
+  if (p.w > p.h) {
+    rr(p.x, p.y, 24, p.h, 12);
+    rr(p.x + p.w - 24, p.y, 24, p.h, 12);
+  } else {
+    rr(p.x, p.y, p.w, 24, 12);
+    rr(p.x, p.y + p.h - 24, p.w, 24, 12);
+  }
+}
+
+function drawRound(o) {
+  const d = 10;
+  shadowCapsule(o.x, o.y + d, o.r);
+  disc(o.x, o.y + d, o.r, o.color);
+  disc(o.x, o.y + d, o.r, "rgba(0,0,0,0.3)");
+  disc(o.x, o.y, o.r, o.color);
+
+  if (o.type === "bowl") {
+    disc(o.x, o.y, o.r * 0.78, "rgba(255,255,255,0.3)");
+    disc(o.x, o.y, o.r * 0.6, "#e6c48a");
+    ctx.fillStyle = "#b9722e";
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.arc(o.x + Math.cos(i * 1.05) * o.r * 0.33, o.y + Math.sin(i * 1.05) * o.r * 0.33, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (o.type === "pot") {
+    disc(o.x, o.y, o.r * 0.8, "#4d5359");
+    disc(o.x, o.y, o.r * 0.62, "#6b7278");
+    drawBox(o.x + o.r - 4, o.y - 7, 34, 14, "#5a3a2a", 4, 6);
+  } else if (o.type === "kettle") {
+    disc(o.x - o.r * 0.25, o.y - o.r * 0.25, o.r * 0.35, "rgba(255,255,255,0.25)");
+    disc(o.x, o.y, o.r * 0.22, "#7a2f2a");
+  } else {
+    disc(o.x, o.y, o.r * 0.75, "#a8c7b3");
+    disc(o.x, o.y, o.r * 0.55, "#8fb39e");
+  }
+}
+
+function drawPuddle(p) {
+  disc(p.x, p.y, p.r, "rgba(150,215,245,0.8)");
+  disc(p.x - 8, p.y - 8, p.r * 0.75, "rgba(255,255,255,0.22)");
+  ctx.strokeStyle = "rgba(255,255,255," + (0.3 + Math.sin(clock * 3) * 0.15) + ")";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.r * 0.5 + Math.sin(clock * 3) * 4, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawNest() {
+  shadowCapsule(NEST.x, NEST.y + 8, NEST.r);
+  disc(NEST.x, NEST.y + 8, NEST.r, "#6f4524");
+  disc(NEST.x, NEST.y, NEST.r, "#a8743a");
+  disc(NEST.x, NEST.y, NEST.r * 0.8, "#d2a35c");
+  ctx.strokeStyle = "#8a5a2b";
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 10; i++) {
+    const a = i * 0.63;
+    ctx.beginPath();
+    ctx.moveTo(NEST.x + Math.cos(a) * 18, NEST.y + Math.sin(a) * 18);
+    ctx.lineTo(NEST.x + Math.cos(a + 0.7) * 44, NEST.y + Math.sin(a + 0.7) * 44);
+    ctx.stroke();
+  }
+  disc(NEST.x, NEST.y, 20, "#7b4f26");
+  ctx.fillStyle = "white";
+  ctx.font = "bold 22px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("🏁 NEST", NEST.x, NEST.y - NEST.r - 14);
+}
+
+function drawCrumb(c) {
+  const y = c.y + Math.sin(clock * 4 + c.x) * 3;
+  disc(c.x, y + 4, 6, "rgba(15,35,70,0.25)");
+  disc(c.x, y, 7, "#ffc83d");
+  disc(c.x - 2, y - 2, 2.5, "#fff0a8");
+}
+
+function drawEgg() {
+  shadowCapsule(egg.x, egg.y + 4, egg.r * 0.9);
+
+  // Blink while protected
+  if (invincible > 0 && Math.floor(clock * 14) % 2 === 0) ctx.globalAlpha = 0.5;
+
+  ctx.save();
+  ctx.translate(egg.x, egg.y - 6);
+  ctx.rotate(egg.spin);
+  ctx.fillStyle = "#fff6e8";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, egg.r * 0.95, egg.r * 1.1, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#c98f5a";   // speckles (they spin so you see it rolling)
+  [[-6, -4, 2.2], [5, 6, 2], [7, -8, 1.6], [-8, 8, 1.6]].forEach((s) => {
+    ctx.beginPath();
+    ctx.arc(s[0], s[1], s[2], 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+
+  // Highlight and cracks do not rotate
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  ctx.beginPath();
+  ctx.ellipse(egg.x - 6, egg.y - 14, 4, 6, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#7a5a3a";
+  ctx.lineWidth = 1.8;
+  if (cracks >= 1) {
+    ctx.beginPath();
+    ctx.moveTo(egg.x - 4, egg.y - 20); ctx.lineTo(egg.x, egg.y - 12);
+    ctx.lineTo(egg.x - 5, egg.y - 6); ctx.lineTo(egg.x + 1, egg.y);
+    ctx.stroke();
+  }
+  if (cracks >= 2) {
+    ctx.beginPath();
+    ctx.moveTo(egg.x + 7, egg.y - 16); ctx.lineTo(egg.x + 3, egg.y - 9);
+    ctx.lineTo(egg.x + 8, egg.y - 3);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Fried egg splat when the egg dies
+function drawSplat(x, y) {
+  ctx.fillStyle = "#fffaf0";
+  [[0, 0, 24], [-18, 6, 14], [16, 10, 16], [4, -18, 12], [-8, 18, 10]].forEach((s) => {
+    ctx.beginPath();
+    ctx.arc(x + s[0], y + s[1], s[2], 0, Math.PI * 2);
+    ctx.fill();
+  });
+  disc(x, y, 10, "#ffb300");
+  disc(x - 3, y - 3, 3, "#ffe08a");
+}
+
+// ===== 11. Render (draw everything) =====
+function render() {
+  // Camera follows the egg
+  const camX = clamp(egg.x - VIEW_W / 2, 0, WORLD_W - VIEW_W);
+  const camY = clamp(egg.y - VIEW_H / 2, 0, WORLD_H - VIEW_H);
+  const sx = (Math.random() - 0.5) * shake;
+  const sy = (Math.random() - 0.5) * shake;
+
+  ctx.fillStyle = "#6b93b9";   // kitchen floor
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+
+  ctx.save();
+  ctx.translate(-camX + sx, -camY + sy);
+
+  // Floor tile lines
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let x = Math.floor(camX / 200) * 200; x < camX + VIEW_W + 200; x += 200) {
+    ctx.moveTo(x, camY - 10); ctx.lineTo(x, camY + VIEW_H + 10);
+  }
+  for (let y = Math.floor(camY / 200) * 200; y < camY + VIEW_H + 200; y += 200) {
+    ctx.moveTo(camX - 10, y); ctx.lineTo(camX + VIEW_W + 10, y);
+  }
+  ctx.stroke();
+
+  // START label
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.font = "bold 28px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("START →", START.x + 20, START.y + 70);
+
+  puddles.forEach(drawPuddle);
+  drawNest();
+  crumbs.forEach((c) => { if (!c.taken) drawCrumb(c); });
+  walls.forEach(drawWall);
+  rounds.forEach(drawRound);
+  knives.forEach(drawKnife);
+  pins.forEach(drawPin);
+
+  if (state === "lose" && loseReason !== "time") drawSplat(egg.x, egg.y);
+  else drawEgg();
+
+  ctx.restore();
+
+  // Level name banner (shows for 2.5 seconds at the start of a level)
+  if (state === "play" && gameTime < 2.5) {
+    ctx.globalAlpha = Math.min(1, 2.5 - gameTime);
+    ctx.fillStyle = "rgba(20,35,60,0.75)";
+    ctx.fillRect(0, 24, VIEW_W, 54);
+    ctx.fillStyle = "white";
+    ctx.font = "bold 28px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(LEVELS[levelIndex].name, VIEW_W / 2, 60);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ===== 12. HUD =====
+function updateHud() {
+  timeEl.textContent = Math.ceil(timeLeft);
+  scoreEl.textContent = score;
+  heartsEl.textContent = "🥚".repeat(MAX_CRACKS - cracks) + "🍳".repeat(cracks);
+}
+
+// ===== 13. Main loop =====
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.033);
+  last = now;
+  clock += dt;
+  if (state === "play") update(dt);
+  shake = Math.max(0, shake - dt * 40);
+  render();
+  updateHud();
+  requestAnimationFrame(loop);
+}
+
+// ===== 14. Start =====
+loadLevel(0);          // show level 1 behind the menu
+egg = makeEgg();
+timeLeft = TIME_LIMIT;
+updatePins(0);
+requestAnimationFrame(loop);
