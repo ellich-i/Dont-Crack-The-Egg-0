@@ -1,0 +1,96 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  color: #3a2a1a;
+  /* Kitchen tile pattern */
+  background: repeating-conic-gradient(#fff4dc 0% 25%, #ffe9bd 0% 50%) 50% / 60px 60px;
+}
+
+.wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+h1 {
+  margin: 0;
+  letter-spacing: 2px;
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+}
+
+.tagline {
+  margin: 4px 0 12px;
+  font-style: italic;
+}
+
+.hud {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.chip {
+  background: white;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+}
+
+.stage {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.18);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #6b93b9;
+  touch-action: none; /* stops page scrolling while dragging */
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  color: white;
+  background: rgba(20, 35, 60, 0.75);
+}
+
+.overlay.hidden { display: none; }
+
+.overlay h2 { margin: 0 0 10px; font-size: clamp(1.4rem, 4vw, 2rem); }
+.overlay p { line-height: 1.7; margin: 0 0 18px; }
+
+button {
+  background: #ffc83d;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #c58f00;
+}
+
+button:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #c58f00;
+}
+
+.help {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
